@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08140f"><meta name="description" content="SHEAMUS Football Predictor - fixtures and statistical score estimates">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>SHEAMUS Football Predictor</title>
+<style>
+:root{color-scheme:dark;--bg:#07110d;--panel:#102019;--panel2:#14291f;--green:#43e08a;--muted:#a8b9af;--line:#274333}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#173b29 0,#07110d 52%);color:#f3fff7;font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:22px 18px 16px;max-width:900px;margin:auto}h1{font-size:24px;letter-spacing:.5px;margin:0 0 6px}h1 span{color:var(--green)}.sub{color:var(--muted);font-size:13px}
+main{max-width:900px;margin:auto;padding:0 14px 36px}.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+select,button{border:1px solid var(--line);background:#102019;color:#fff;border-radius:12px;padding:12px;font:inherit;min-width:0}button{background:var(--green);color:#062012;font-weight:800;border:0;cursor:pointer}.wide{width:100%}
+.status{padding:11px 13px;background:#102019;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:13px;margin:10px 0 16px}
+.sectiontitle{font-size:16px;margin:18px 2px 10px}.match{background:linear-gradient(145deg,#13271e,#0d1b14);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 8px 22px #0003}
+.matchtop{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;margin-bottom:12px}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.team{font-weight:700;line-height:1.25}.team.away{text-align:right}.vs{color:var(--muted);font-size:11px}
+.pred{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin-top:13px;padding-top:12px}.score{font-size:23px;font-weight:900;color:var(--green);white-space:nowrap}.small{font-size:12px;color:var(--muted)}.pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.pill{background:#1b3828;border:1px solid #31583f;border-radius:30px;padding:5px 9px;font-size:11px;color:#d9fbe6}
+.empty{padding:28px 14px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
+footer{color:var(--muted);font-size:11px;line-height:1.5;padding:18px 2px}
+@media(min-width:650px){.toolbar{grid-template-columns:1fr 1fr auto}.match{padding:17px}}
+</style></head>
+<body>
+<header><h1>⚽ <span>SHEAMUS</span> FOOTBALL PREDICTOR</h1><div class="sub">Automatic fixtures • Correct-score estimates • Match analysis</div></header>
+<main>
+<div class="toolbar">
+<select id="league" aria-label="Choose league">
+<option value="eng.1">English Premier League</option><option value="esp.1">Spanish La Liga</option><option value="ita.1">Italian Serie A</option><option value="ger.1">German Bundesliga</option><option value="fra.1">French Ligue 1</option><option value="uefa.champions">UEFA Champions League</option><option value="usa.1">MLS</option>
+</select>
+<select id="range" aria-label="Date range"><option value="7">Next 7 days</option><option value="3">Next 3 days</option><option value="14">Next 14 days</option></select>
+<button id="refresh">Refresh matches</button>
+</div>
+<div id="status" class="status">Ready. Tap “Refresh matches” to load fixtures.</div>
+<div class="sectiontitle">Upcoming and live matches</div>
+<div id="matches"><div class="empty">Your fixtures will appear here.</div></div>
+<footer>
+<strong>Important:</strong> Correct scores are inherently difficult to predict. This prototype uses a simple league-baseline Poisson model, not verified team-specific form, injuries, line-ups or bookmaker odds. Percentages are model estimates, not guarantees or betting advice. Fixtures are retrieved through a Netlify server-side function from ESPN's public scoreboard feed, which may change or become unavailable.
+</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const leagues={
+'eng.1':{home:1.55,away:1.20},'esp.1':{home:1.48,away:1.13},'ita.1':{home:1.43,away:1.12},
+'ger.1':{home:1.70,away:1.38},'fra.1':{home:1.48,away:1.16},'uefa.champions':{home:1.58,away:1.28},'usa.1':{home:1.58,away:1.30}
+};
+const pad=n=>String(n).padStart(2,'0');
+function ymd(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())}
+function poisson(k,l){let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p}
+function predict(home,away){
+ const scores=[];let homeWin=0,draw=0,awayWin=0,btts=0,over=0,total=0;
+ for(let h=0;h<=6;h++)for(let a=0;a<=6;a++){
+  const p=poisson(h,home)*poisson(a,away);scores.push({h,a,p});total+=p;
+  if(h>a)homeWin+=p;else if(h===a)draw+=p;else awayWin+=p;
+  if(h>0&&a>0)btts+=p;if(h+a>=3)over+=p;
+ }
+ scores.sort((x,y)=>y.p-x.p);
+ return {scores:scores.slice(0,3).map(s=>({...s,p:s.p/total})),homeWin:homeWin/total,draw:draw/total,awayWin:awayWin/total,btts:btts/total,over:over/total,under:1-over/total};
+}
+function pct(n){return Math.round(n*100)+'%'}
+function render(events){
+ const root=$('matches');root.innerHTML='';
+ if(!events.length){root.innerHTML='<div class="empty">No fixtures found in this date range for this competition. Try another league or date range.</div>';return}
+ events.sort((a,b)=>new Date(a.date)-new Date(b.date));
+ for(const e of events){
+  const comp=e.competitions?.[0];if(!comp)continue;
+  const competitors=comp.competitors||[];
+  const h=competitors.find(t=>t.homeAway==='home'),a=competitors.find(t=>t.homeAway==='away');if(!h||!a)continue;
+  const model=leagues[$('league').value]||leagues['eng.1'];const p=predict(model.home,model.away);
+  const d=new Date(e.date);const time=d.toLocaleString([], {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const live=comp.status?.type?.state==='in';const done=comp.status?.type?.completed;
+  const result=done?`${h.score??'-'} – ${a.score??'-'}`:live?`${h.score??'0'} – ${a.score??'0'}`:'VS';
+  const best=p.scores[0], second=p.scores[1], third=p.scores[2];
+  const card=document.createElement('article');card.className='match';
+  card.innerHTML=`<div class="matchtop"><span>${time}</span><span>${done?'FULL TIME':live?'LIVE':(comp.status?.type?.detail||'SCHEDULED')}</span></div>
+  <div class="teams"><div class="team">${h.team?.displayName||'Home'}</div><div class="vs">${result}</div><div class="team away">${a.team?.displayName||'Away'}</div></div>
+  <div class="pred"><div><div class="small">Top correct-score estimate</div><div class="score">${best.h} – ${best.a}</div><div class="small">Model probability ${pct(best.p)}</div></div><div style="text-align:right"><div class="small">Other likely scores</div><strong>${second.h}–${second.a}</strong> · <strong>${third.h}–${third.a}</strong></div></div>
+  <div class="pills"><span class="pill">Home ${pct(p.homeWin)}</span><span class="pill">Draw ${pct(p.draw)}</span><span class="pill">Away ${pct(p.awayWin)}</span><span class="pill">BTTS ${pct(p.btts)}</span><span class="pill">Over 2.5 ${pct(p.over)}</span><span class="pill">Under 2.5 ${pct(p.under)}</span></div>`;
+  root.appendChild(card);
+ }
+ if(!root.children.length)root.innerHTML='<div class="empty">No usable fixtures returned.</div>';
+}
+async function load(){
+ const league=$('league').value,days=Number($('range').value);
+ const start=new Date();const end=new Date();end.setDate(end.getDate()+days);
+ $('status').textContent='Loading fixtures…';
+ $('refresh').disabled=true;
+ try{
+  const url=`/.netlify/functions/fixtures?league=${encodeURIComponent(league)}&start=${ymd(start)}&end=${ymd(end)}`;
+  const res=await fetch(url,{cache:'no-store'});if(!res.ok){let detail='Fixture service returned HTTP '+res.status;try{const problem=await res.json();if(problem.error)detail=problem.error}catch(_){}throw new Error(detail)}
+  const data=await res.json();const events=data.events||[];
+  render(events);
+  $('status').textContent=`Loaded ${events.length} fixture(s). Updated ${new Date().toLocaleTimeString()}. Auto-refreshes every 60 seconds.`;
+ }catch(err){$('status').textContent='Could not load fixtures: '+err.message+'. Check your internet connection and try again.';$('matches').innerHTML='<div class="empty">Live fixture service is unavailable right now. Please try again later.</div>'}
+ finally{$('refresh').disabled=false}
+}
+$('refresh').addEventListener('click',load);
+setInterval(()=>{if(document.visibilityState==='visible')load()},60000);
+$('league').addEventListener('change',load);$('range').addEventListener('change',load);
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+load();
+</script></body></html>

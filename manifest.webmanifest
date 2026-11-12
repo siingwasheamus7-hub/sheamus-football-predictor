@@ -1,0 +1,17 @@
+{
+  "name": "SHEAMUS Football Predictor",
+  "short_name": "SHEAMUS Predictor",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07110d",
+  "theme_color": "#08140f",
+  "description": "Automatic football fixtures and statistical correct-score estimates.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
