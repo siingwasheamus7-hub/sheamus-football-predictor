@@ -44,7 +44,15 @@ const leagues={
 };
 const pad=n=>String(n).padStart(2,'0');
 function ymd(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())}
-function poisson(k,l){let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p}
+
+function poisson(k, lambda) {
+  let p = Math.exp(-lambda);
+  for (let i = 1; i <= k; i++) {
+    p *= lambda / i;
+  }
+  return p;
+}
+
 function predict(home,away){
  const scores=[];let homeWin=0,draw=0,awayWin=0,btts=0,over=0,total=0;
  for(let h=0;h<=6;h++)for(let a=0;a<=6;a++){
