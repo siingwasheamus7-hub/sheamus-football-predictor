@@ -38,6 +38,42 @@ footer{color:var(--muted);font-size:11px;line-height:1.5;padding:18px 2px}
 </main>
 <script>
 const $=id=>document.getElementById(id);
+const teamStats = {};
+
+function buildTeamStats(results) {
+  const teams = {};
+
+  for (const match of results || []) {
+    const c = match.competitions?.[0]?.competitors || [];
+    const h = c.find(t => t.homeAway === "home");
+    const a = c.find(t => t.homeAway === "away");
+
+    if (!h || !a) continue;
+
+    const hg = Number(h.score);
+    const ag = Number(a.score);
+
+    if (!Number.isFinite(hg) || !Number.isFinite(ag)) continue;
+
+    function add(id, scored, conceded) {
+      if (!id) return;
+      if (!teams[id]) teams[id] = {scored:0, conceded:0, played:0};
+      teams[id].scored += scored;
+      teams[id].conceded += conceded;
+      teams[id].played++;
+    }
+
+    add(h.team?.id, hg, ag);
+    add(a.team?.id, ag, hg);
+  }
+
+  for (const [id,s] of Object.entries(teams)) {
+    teamStats[id] = {
+      attack: Math.max(0.65, Math.min(1.65,(s.scored/s.played+0.25)/1.35)),
+      defence: Math.max(0.65, Math.min(1.65,(s.conceded/s.played+0.25)/1.35))
+    };
+  }
+}
 const leagues={
 'eng.1':{home:1.55,away:1.20},'esp.1':{home:1.48,away:1.13},'ita.1':{home:1.43,away:1.12},
 'ger.1':{home:1.70,away:1.38},'fra.1':{home:1.48,away:1.16},'uefa.champions':{home:1.58,away:1.28},'usa.1':{home:1.58,away:1.30}
