@@ -130,7 +130,7 @@ async function load(){
  $('status').textContent='Loading fixtures…';
  $('refresh').disabled=true;
  try{
-  const url=`/.netlify/functions/fixtures?league=${encodeURIComponent(league)}&start=${ymd(start)}&end=${ymd(end)}`;
+  const url=`/.netlify/functions/fixtures?league=${encodeURIComponent(league)}`;
   const res=await fetch(url,{cache:'no-store'});if(!res.ok){let detail='Fixture service returned HTTP '+res.status;try{const problem=await res.json();if(problem.error)detail=problem.error}catch(_){}throw new Error(detail)}
   const data=await res.json();const events=data.events||[];
   render(events);
