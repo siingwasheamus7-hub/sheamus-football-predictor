@@ -53,16 +53,42 @@ function poisson(k, lambda) {
   return p;
 }
 
-function predict(home,away){
- const scores=[];let homeWin=0,draw=0,awayWin=0,btts=0,over=0,total=0;
- for(let h=0;h<=6;h++)for(let a=0;a<=6;a++){
-  const p=poisson(h,home)*poisson(a,away);scores.push({h,a,p});total+=p;
-  if(h>a)homeWin+=p;else if(h===a)draw+=p;else awayWin+=p;
-  if(h>0&&a>0)btts+=p;if(h+a>=3)over+=p;
+
+function predict(home, away, homeAttack=1.35, homeDefence=1.10, awayAttack=1.10, awayDefence=1.15) {
+ const homeGoals = Math.max(0.15, home * homeAttack * awayDefence);
+ const awayGoals = Math.max(0.15, away * awayAttack * homeDefence);
+
+ const scores = [];
+ let homeWin=0, draw=0, awayWin=0, btts=0, over=0, total=0;
+
+ for(let h=0;h<=8;h++){
+  for(let a=0;a<=8;a++){
+   const p=poisson(h,homeGoals)*poisson(a,awayGoals);
+   scores.push({h,a,p});
+   total+=p;
+
+   if(h>a)homeWin+=p;
+   else if(h===a)draw+=p;
+   else awayWin+=p;
+
+   if(h>0&&a>0)btts+=p;
+   if(h+a>=3)over+=p;
+  }
  }
+
  scores.sort((x,y)=>y.p-x.p);
- return {scores:scores.slice(0,3).map(s=>({...s,p:s.p/total})),homeWin:homeWin/total,draw:draw/total,awayWin:awayWin/total,btts:btts/total,over:over/total,under:1-over/total};
+
+ return {
+  scores:scores.slice(0,3).map(s=>({...s,p:s.p/total})),
+  homeWin:homeWin/total,
+  draw:draw/total,
+  awayWin:awayWin/total,
+  btts:btts/total,
+  over:over/total,
+  under:1-over/total
+ };
 }
+
 function pct(n){return Math.round(n*100)+'%'}
 function render(events){
  const root=$('matches');root.innerHTML='';
