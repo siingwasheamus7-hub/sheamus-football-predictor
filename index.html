@@ -98,7 +98,19 @@ function render(events){
   const comp=e.competitions?.[0];if(!comp)continue;
   const competitors=comp.competitors||[];
   const h=competitors.find(t=>t.homeAway==='home'),a=competitors.find(t=>t.homeAway==='away');if(!h||!a)continue;
-  const model=leagues[$('league').value]||leagues['eng.1'];const p=predict(model.home,model.away);
+  const model=leagues[$('league').value]||leagues['eng.1'];
+
+const homeStats=teamStats[h.team?.id]||{};
+const awayStats=teamStats[a.team?.id]||{};
+
+const p=predict(
+ model.home,
+ model.away,
+ homeStats.attack||1.35,
+ homeStats.defence||1.10,
+ awayStats.attack||1.10,
+ awayStats.defence||1.15
+);
   const d=new Date(e.date);const time=d.toLocaleString([], {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const live=comp.status?.type?.state==='in';const done=comp.status?.type?.completed;
   const result=done?`${h.score??'-'} – ${a.score??'-'}`:live?`${h.score??'0'} – ${a.score??'0'}`:'VS';
