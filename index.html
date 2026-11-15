@@ -168,8 +168,16 @@ async function load(){
  try{
   const url=`/.netlify/functions/fixtures?league=${encodeURIComponent(league)}`;
   const res=await fetch(url,{cache:'no-store'});if(!res.ok){let detail='Fixture service returned HTTP '+res.status;try{const problem=await res.json();if(problem.error)detail=problem.error}catch(_){}throw new Error(detail)}
-  const data=await res.json();const events=data.events||[];
-  render(events);
+ 
+const data=await res.json();
+
+buildTeamStats(data.recentResults || []);
+
+const events=data.events||[];
+
+render(events);
+
+render(events);
   $('status').textContent=`Loaded ${events.length} fixture(s). Updated ${new Date().toLocaleTimeString()}. Auto-refreshes every 60 seconds.`;
  }catch(err){$('status').textContent='Could not load fixtures: '+err.message+'. Check your internet connection and try again.';$('matches').innerHTML='<div class="empty">Live fixture service is unavailable right now. Please try again later.</div>'}
  finally{$('refresh').disabled=false}
