@@ -40,8 +40,14 @@ footer{color:var(--muted);font-size:11px;line-height:1.5;padding:18px 2px}
 const $=id=>document.getElementById(id);
 const teamStats = {};
 
+
 function buildTeamStats(results) {
+  Object.keys(teamStats).forEach(id => delete teamStats[id]);
+
   const teams = {};
+  let leagueHomeGoals = 0;
+  let leagueAwayGoals = 0;
+  let totalWeight = 0;
 
   for (const match of results || []) {
     const c = match.competitions?.[0]?.competitors || [];
@@ -55,25 +61,69 @@ function buildTeamStats(results) {
 
     if (!Number.isFinite(hg) || !Number.isFinite(ag)) continue;
 
-    function add(id, scored, conceded) {
+    const ageDays = match.date
+      ? Math.max(0, (Date.now() - new Date(match.date).getTime()) / 86400000)
+      : 0;
+
+    const weight = Math.pow(0.5, ageDays / 21);
+
+    leagueHomeGoals += hg * weight;
+    leagueAwayGoals += ag * weight;
+    totalWeight += weight;
+
+    function add(id, scored, conceded, venue) {
       if (!id) return;
-      if (!teams[id]) teams[id] = {scored:0, conceded:0, played:0};
-      teams[id].scored += scored;
-      teams[id].conceded += conceded;
-      teams[id].played++;
+
+      if (!teams[id]) {
+        teams[id] = {
+          homeFor: 0, homeAgainst: 0, homeWeight: 0,
+          awayFor: 0, awayAgainst: 0, awayWeight: 0
+        };
+      }
+
+      const t = teams[id];
+
+      if (venue === "home") {
+        t.homeFor += scored * weight;
+        t.homeAgainst += conceded * weight;
+        t.homeWeight += weight;
+      } else {
+        t.awayFor += scored * weight;
+        t.awayAgainst += conceded * weight;
+        t.awayWeight += weight;
+      }
     }
 
-    add(h.team?.id, hg, ag);
-    add(a.team?.id, ag, hg);
+    add(h.team?.id, hg, ag, "home");
+    add(a.team?.id, ag, hg, "away");
   }
 
-  for (const [id,s] of Object.entries(teams)) {
+  if (!totalWeight) return;
+
+  const avgHome = leagueHomeGoals / totalWeight;
+  const avgAway = leagueAwayGoals / totalWeight;
+  const prior = 4;
+
+  for (const [id, t] of Object.entries(teams)) {
+    const homeWeight = t.homeWeight + prior;
+    const awayWeight = t.awayWeight + prior;
+
     teamStats[id] = {
-      attack: Math.max(0.65, Math.min(1.65,(s.scored/s.played+0.25)/1.35)),
-      defence: Math.max(0.65, Math.min(1.65,(s.conceded/s.played+0.25)/1.35))
+      homeAttack: (t.homeFor + avgHome * prior) / homeWeight / avgHome,
+      homeDefence: (t.homeAgainst + avgAway * prior) / homeWeight / avgAway,
+      awayAttack: (t.awayFor + avgAway * prior) / awayWeight / avgAway,
+      awayDefence: (t.awayAgainst + avgHome * prior) / awayWeight / avgHome
     };
+
+    for (const key of Object.keys(teamStats[id])) {
+      teamStats[id][key] = Math.max(0.65, Math.min(1.65, teamStats[id][key]));
+    }
+
+    teamStats[id].attack = teamStats[id].homeAttack;
+    teamStats[id].defence = teamStats[id].homeDefence;
   }
 }
+
 const leagues={
 'eng.1':{home:1.55,away:1.20},'esp.1':{home:1.48,away:1.13},'ita.1':{home:1.43,away:1.12},
 'ger.1':{home:1.70,away:1.38},'fra.1':{home:1.48,away:1.16},'uefa.champions':{home:1.58,away:1.28},'usa.1':{home:1.58,away:1.30}
