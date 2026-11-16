@@ -179,7 +179,7 @@ const events=data.events||[];
 
 render(events);
 
-  $('status').textContent=`Loaded ${events.length} fixture(s). Updated ${new Date().toLocaleTimeString()}. Auto-refreshes every 60 seconds.`;
+  $('status').textContent=`Fixtures: ${events.length} | Recent results: ${(data.recentResults||[]).length} | Teams analysed: ${Object.keys(teamStats).length} | Updated: ${new Date().toLocaleTimeString()}`;
  }catch(err){$('status').textContent='Could not load fixtures: '+err.message+'. Check your internet connection and try again.';$('matches').innerHTML='<div class="empty">Live fixture service is unavailable right now. Please try again later.</div>'}
  finally{$('refresh').disabled=false}
 }
