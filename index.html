@@ -195,6 +195,75 @@ function predict(home, away, homeAttack=1.35, homeDefence=1.10, awayAttack=1.10,
 
 
 function pct(n){return Math.round(n*100)+'%'}
+
+const TRACKER_KEY = 'sheamus_prediction_tracker_v1';
+
+function getTrackerRecords() {
+  try {
+    return JSON.parse(localStorage.getItem(TRACKER_KEY) || '{}');
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveTrackerRecords(records) {
+  localStorage.setItem(TRACKER_KEY, JSON.stringify(records));
+}
+
+function getOutcome(home, away) {
+  if (home > away) return 'HOME';
+  if (home < away) return 'AWAY';
+  return 'DRAW';
+}
+
+function recordPrediction(event, home, away, prediction) {
+  if (!event.id) return;
+
+  const records = getTrackerRecords();
+
+  if (records[event.id]) return;
+
+  records[event.id] = {
+    home: home.team?.displayName || 'Home',
+    away: away.team?.displayName || 'Away',
+    predictedHome: prediction.scores[0].h,
+    predictedAway: prediction.scores[0].a,
+    predictedOutcome: getOutcome(
+      prediction.homeWin,
+      prediction.awayWin
+    ),
+    completed: false
+  };
+
+  saveTrackerRecords(records);
+}
+
+function settlePrediction(event, home, away) {
+  if (!event.id) return;
+
+  const records = getTrackerRecords();
+  const record = records[event.id];
+
+  if (!record || record.completed) return;
+
+  const actualHome = Number(home.score);
+  const actualAway = Number(away.score);
+
+  if (!Number.isFinite(actualHome) || !Number.isFinite(actualAway)) return;
+
+  record.actualHome = actualHome;
+  record.actualAway = actualAway;
+  record.actualOutcome = getOutcome(actualHome, actualAway);
+  record.correctScore =
+    record.predictedHome === actualHome &&
+    record.predictedAway === actualAway;
+  record.correctOutcome =
+    record.predictedOutcome === record.actualOutcome;
+  record.completed = true;
+
+  saveTrackerRecords(records);
+}
+
 function render(events){
  const root=$('matches');root.innerHTML='';
  if(!events.length){root.innerHTML='<div class="empty">No fixtures found in this date range for this competition. Try another league or date range.</div>';return}
