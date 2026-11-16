@@ -140,6 +140,7 @@ function poisson(k, lambda) {
 }
 
 
+
 function predict(home, away, homeAttack=1.35, homeDefence=1.10, awayAttack=1.10, awayDefence=1.15) {
  const homeGoals = Math.max(0.15, home * homeAttack * awayDefence);
  const awayGoals = Math.max(0.15, away * awayAttack * homeDefence);
@@ -147,9 +148,26 @@ function predict(home, away, homeAttack=1.35, homeDefence=1.10, awayAttack=1.10,
  const scores = [];
  let homeWin=0, draw=0, awayWin=0, btts=0, over=0, total=0;
 
- for(let h=0;h<=8;h++){
-  for(let a=0;a<=8;a++){
-   const p=poisson(h,homeGoals)*poisson(a,awayGoals);
+ const rho = -0.06;
+
+ for(let h=0;h<=10;h++){
+  for(let a=0;a<=10;a++){
+   let p=poisson(h,homeGoals)*poisson(a,awayGoals);
+
+   // Adjust the probabilities of low-scoring results
+   let correction = 1;
+
+   if(h===0 && a===0)
+    correction = 1 - homeGoals * awayGoals * rho;
+   else if(h===0 && a===1)
+    correction = 1 + homeGoals * rho;
+   else if(h===1 && a===0)
+    correction = 1 + awayGoals * rho;
+   else if(h===1 && a===1)
+    correction = 1 - rho;
+
+   p *= correction;
+
    scores.push({h,a,p});
    total+=p;
 
@@ -174,6 +192,7 @@ function predict(home, away, homeAttack=1.35, homeDefence=1.10, awayAttack=1.10,
   under:1-over/total
  };
 }
+
 
 function pct(n){return Math.round(n*100)+'%'}
 function render(events){
