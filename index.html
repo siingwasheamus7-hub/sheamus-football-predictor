@@ -228,10 +228,12 @@ function recordPrediction(event, home, away, prediction) {
     away: away.team?.displayName || 'Away',
     predictedHome: prediction.scores[0].h,
     predictedAway: prediction.scores[0].a,
-    predictedOutcome: getOutcome(
-      prediction.homeWin,
-      prediction.awayWin
-    ),
+    predictedOutcome:
+  prediction.homeWin >= prediction.draw && prediction.homeWin >= prediction.awayWin
+    ? 'HOME'
+    : prediction.draw >= prediction.awayWin
+      ? 'DRAW'
+      : 'AWAY',
     completed: false
   };
 
