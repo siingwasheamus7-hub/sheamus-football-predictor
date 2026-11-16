@@ -190,15 +190,15 @@ const model=leagues[$('league').value]||leagues['eng.1'];
 const homeStats=teamStats[h.team?.id];
 const awayStats=teamStats[a.team?.id];
 
-const p=predict(
- model.home,
- model.away,
- homeStats ? homeStats.attack : 1,
- homeStats ? homeStats.defence : 1,
- awayStats ? awayStats.attack : 1,
- awayStats ? awayStats.defence : 1
-);
 
+const p=predict(
+  model.home,
+  model.away,
+  homeStats ? homeStats.homeAttack : 1,
+  homeStats ? homeStats.homeDefence : 1,
+  awayStats ? awayStats.awayAttack : 1,
+  awayStats ? awayStats.awayDefence : 1
+);
   const d=new Date(e.date);const time=d.toLocaleString([], {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const live=comp.status?.type?.state==='in';const done=comp.status?.type?.completed;
   const result=done?`${h.score??'-'} – ${a.score??'-'}`:live?`${h.score??'0'} – ${a.score??'0'}`:'VS';
