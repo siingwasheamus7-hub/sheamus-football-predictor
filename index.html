@@ -287,6 +287,14 @@ const p=predict(
   awayStats ? awayStats.awayAttack : 1,
   awayStats ? awayStats.awayDefence : 1
 );
+const isCompleted = comp.status?.type?.completed;
+const isLive = comp.status?.type?.state === 'in';
+
+if (isCompleted) {
+  settlePrediction(e, h, a);
+} else if (!isLive && new Date(e.date).getTime() > Date.now()) {
+  recordPrediction(e, h, a, p);
+}
   const d=new Date(e.date);const time=d.toLocaleString([], {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const live=comp.status?.type?.state==='in';const done=comp.status?.type?.completed;
   const result=done?`${h.score??'-'} – ${a.score??'-'}`:live?`${h.score??'0'} – ${a.score??'0'}`:'VS';
