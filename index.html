@@ -269,6 +269,24 @@ function settlePrediction(event, home, away) {
 
   saveTrackerRecords(records);
 }
+function updateTrackerStats() {
+  const records = Object.values(getTrackerRecords());
+  const completed = records.filter(r => r.completed);
+
+  const correctScores = completed.filter(r => r.correctScore).length;
+  const correctOutcomes = completed.filter(r => r.correctOutcome).length;
+
+  const scoreAccuracy = completed.length
+    ? Math.round(correctScores / completed.length * 100)
+    : 0;
+
+  const outcomeAccuracy = completed.length
+    ? Math.round(correctOutcomes / completed.length * 100)
+    : 0;
+
+  $('trackerStats').textContent =
+    `Predictions: ${records.length} | Completed: ${completed.length} | Correct scores: ${correctScores} (${scoreAccuracy}%) | Correct outcomes: ${correctOutcomes} (${outcomeAccuracy}%)`;
+}
 
 function render(events){
  const root=$('matches');root.innerHTML='';
