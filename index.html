@@ -242,6 +242,7 @@ function recordPrediction(event, home, away, prediction) {
   };
 
   saveTrackerRecords(records);
+  updateTrackerStats();
 }
 
 function settlePrediction(event, home, away) {
@@ -268,6 +269,7 @@ function settlePrediction(event, home, away) {
   record.completed = true;
 
   saveTrackerRecords(records);
+  updateTrackerStats();
 }
 function updateTrackerStats() {
   const records = Object.values(getTrackerRecords());
