@@ -335,6 +335,7 @@ if (isCompleted) {
  if(!root.children.length)root.innerHTML='<div class="empty">No usable fixtures returned.</div>';
 }
 async function load(){
+ updateTrackerStats();
  const league=$('league').value,days=Number($('range').value);
  const start=new Date();const end=new Date();end.setDate(end.getDate()+days);
  $('status').textContent='Loading fixtures…';
