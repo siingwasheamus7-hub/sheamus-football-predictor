@@ -3,7 +3,7 @@ export async function onRequest(context) {
   const headers = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Cache-Control": "public, max-age=60"
+    "Cache-Control": "public, max-age=600"
   };
 
   if (context.request.method === "OPTIONS") {
@@ -16,14 +16,27 @@ export async function onRequest(context) {
     });
   }
 
+  const cacheKey = new Request(
+    new URL("/api/africa", context.request.url).toString(),
+    { method: "GET" }
+  );
+
   try {
+    // Check Cloudflare cache before contacting API-Football
+    if (typeof caches !== "undefined" && caches.default) {
+      const cached = await caches.default.match(cacheKey);
+
+      if (cached) {
+        return cached;
+      }
+    }
+
     const apiKey = context.env.API_FOOTBALL_KEY;
 
     if (!apiKey) {
       throw new Error("API_FOOTBALL_KEY is not configured");
     }
 
-    // African national-team and club competitions
     const africanLeagues = [
       { id: 36, name: "AFCON Qualifiers", category: "National Teams" },
       { id: 922, name: "Women's AFCON", category: "National Teams" },
@@ -39,7 +52,6 @@ export async function onRequest(context) {
       { id: 1164, name: "CAF Women's Champions League", category: "African Clubs" }
     ];
 
-    // Request fixtures for the next 7 days in one API call
     const today = new Date();
     const from = today.toISOString().slice(0, 10);
 
@@ -82,7 +94,7 @@ export async function onRequest(context) {
           africanLeagues.find(item => item.id === match.league.id)?.category
       }));
 
-    return new Response(JSON.stringify({
+    const result = new Response(JSON.stringify({
       success: true,
       message: "African football fixtures loaded successfully",
       total: fixtures.length,
@@ -95,13 +107,23 @@ export async function onRequest(context) {
       headers
     });
 
+    // Store successful results for 10 minutes
+    if (typeof caches !== "undefined" && caches.default) {
+      await caches.default.put(cacheKey, result.clone());
+    }
+
+    return result;
+
   } catch (error) {
     return new Response(JSON.stringify({
       success: false,
       error: error.message
     }), {
       status: 500,
-      headers
+      headers: {
+        ...headers,
+        "Cache-Control": "no-store"
+      }
     });
   }
 }
