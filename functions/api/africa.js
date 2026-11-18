@@ -16,21 +16,7 @@ export async function onRequest(context) {
     });
   }
 
-  const cacheKey = new Request(
-    new URL("/api/africa", context.request.url).toString(),
-    { method: "GET" }
-  );
-
   try {
-    // Check Cloudflare cache before contacting API-Football
-    if (typeof caches !== "undefined" && caches.default) {
-      const cached = await caches.default.match(cacheKey);
-
-      if (cached) {
-        return cached;
-      }
-    }
-
     const apiKey = context.env.API_FOOTBALL_KEY;
 
     if (!apiKey) {
@@ -52,27 +38,44 @@ export async function onRequest(context) {
       { id: 1164, name: "CAF Women's Champions League", category: "African Clubs" }
     ];
 
-    const today = new Date();
-    const from = today.toISOString().slice(0, 10);
+    const now = new Date();
 
-    const endDate = new Date(today);
-    endDate.setUTCDate(endDate.getUTCDate() + 7);
-    const to = endDate.toISOString().slice(0, 10);
+    const formatDate = date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
-    const url =
-      `https://v3.football.api-sports.io/fixtures?from=${from}&to=${to}`;
+    const from = formatDate(now);
 
-    const response = await fetch(url, {
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 7);
+
+    const to = formatDate(endDate);
+
+    if (!from || !to) {
+      throw new Error("Could not generate fixture date range");
+    }
+
+    const url = new URL(
+      "https://v3.football.api-sports.io/fixtures"
+    );
+
+    url.searchParams.set("from", from);
+    url.searchParams.set("to", to);
+
+    const response = await fetch(url.toString(), {
       headers: {
         "x-apisports-key": apiKey
       }
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
       throw new Error("API-Football request failed: " + response.status);
     }
-
-    const data = await response.json();
 
     if (data.errors && Object.keys(data.errors).length) {
       throw new Error("API-Football error: " + JSON.stringify(data.errors));
@@ -94,7 +97,7 @@ export async function onRequest(context) {
           africanLeagues.find(item => item.id === match.league.id)?.category
       }));
 
-    const result = new Response(JSON.stringify({
+    return new Response(JSON.stringify({
       success: true,
       message: "African football fixtures loaded successfully",
       total: fixtures.length,
@@ -104,15 +107,11 @@ export async function onRequest(context) {
       fixtures
     }), {
       status: 200,
-      headers
+      headers: {
+        ...headers,
+        "Cache-Control": "no-store"
+      }
     });
-
-    // Store successful results for 10 minutes
-    if (typeof caches !== "undefined" && caches.default) {
-      await caches.default.put(cacheKey, result.clone());
-    }
-
-    return result;
 
   } catch (error) {
     return new Response(JSON.stringify({
