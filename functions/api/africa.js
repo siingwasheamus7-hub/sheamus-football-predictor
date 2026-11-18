@@ -38,8 +38,10 @@ export async function onRequest(context) {
     const data = await response.json();
 
     if (data.errors && Object.keys(data.errors).length) {
-      throw new Error("API-Football rejected the request");
-    }
+  throw new Error(
+    "API-Football error: " + JSON.stringify(data.errors)
+  );
+}
 
     const africanCompetitions = (data.response || [])
       .filter(item => {
