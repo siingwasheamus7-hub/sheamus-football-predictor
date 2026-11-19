@@ -63,7 +63,8 @@ const toDate = endDate.toISOString().slice(0, 10);
       "https://v3.football.api-sports.io/fixtures"
     );
 
-    url.searchParams.set("date", today);
+    url.searchParams.set("from", today);
+url.searchParams.set("to", toDate);
     url.searchParams.set("timezone", "Africa/Lusaka");
 
     const response = await fetch(url.toString(), {
