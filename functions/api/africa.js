@@ -60,7 +60,7 @@ export async function onRequest(context) {
 
     const allFixtures = [];
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 2; i++) {
       const currentDate = new Date(startDate);
       currentDate.setUTCDate(currentDate.getUTCDate() + i);
 
@@ -112,7 +112,7 @@ export async function onRequest(context) {
       success: true,
       message: "African football fixtures loaded successfully",
       date: today,
-      days: 7,
+      days: 2,
       total: allFixtures.length,
       competitions: africanLeagues,
       fixtures: allFixtures
