@@ -32,17 +32,14 @@ export async function onRequest(context) {
   ];
 
   try {
-    // Check Cloudflare cache first
     const cache = caches.default;
     const cacheKey = new Request(
-      new URL("/api/africa-cache-v1", context.request.url).toString()
+      new URL("/api/africa-cache-v2", context.request.url).toString()
     );
 
     const cached = await cache.match(cacheKey);
 
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
     const apiKey = context.env.API_FOOTBALL_KEY;
 
@@ -50,12 +47,18 @@ export async function onRequest(context) {
       throw new Error("API_FOOTBALL_KEY is not configured");
     }
 
-    // One API request for the next 99 available fixtures
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Lusaka",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(new Date());
+
     const url = new URL(
       "https://v3.football.api-sports.io/fixtures"
     );
 
-    url.searchParams.set("next", "99");
+    url.searchParams.set("date", today);
     url.searchParams.set("timezone", "Africa/Lusaka");
 
     const response = await fetch(url.toString(), {
@@ -95,6 +98,7 @@ export async function onRequest(context) {
     const result = new Response(JSON.stringify({
       success: true,
       message: "African football fixtures loaded successfully",
+      date: today,
       total: fixtures.length,
       competitions: africanLeagues,
       fixtures
@@ -103,7 +107,6 @@ export async function onRequest(context) {
       headers
     });
 
-    // Save successful response for 10 minutes
     await cache.put(cacheKey, result.clone());
 
     return result;
