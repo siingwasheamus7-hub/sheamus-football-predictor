@@ -48,11 +48,16 @@ export async function onRequest(context) {
     }
 
     const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Africa/Lusaka",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit"
-    }).format(new Date());
+  timeZone: "Africa/Lusaka",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+}).format(new Date());
+
+const endDate = new Date(today + "T00:00:00Z");
+endDate.setUTCDate(endDate.getUTCDate() + 6);
+
+const toDate = endDate.toISOString().slice(0, 10);
 
     const url = new URL(
       "https://v3.football.api-sports.io/fixtures"
