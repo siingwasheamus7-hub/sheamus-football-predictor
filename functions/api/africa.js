@@ -34,11 +34,10 @@ export async function onRequest(context) {
   try {
     const cache = caches.default;
     const cacheKey = new Request(
-      new URL("/api/africa-cache-v2", context.request.url).toString()
+      new URL("/api/africa-cache-v3", context.request.url).toString()
     );
 
     const cached = await cache.match(cacheKey);
-
     if (cached) return cached;
 
     const apiKey = context.env.API_FOOTBALL_KEY;
@@ -48,66 +47,75 @@ export async function onRequest(context) {
     }
 
     const today = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Africa/Lusaka",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit"
-}).format(new Date());
+      timeZone: "Africa/Lusaka",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(new Date());
 
-const endDate = new Date(today + "T00:00:00Z");
-endDate.setUTCDate(endDate.getUTCDate() + 6);
-
-const toDate = endDate.toISOString().slice(0, 10);
-
-    const url = new URL(
-      "https://v3.football.api-sports.io/fixtures"
-    );
-
-    url.searchParams.set("from", today);
-url.searchParams.set("to", toDate);
-    url.searchParams.set("timezone", "Africa/Lusaka");
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        "x-apisports-key": apiKey
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error("API-Football request failed: " + response.status);
-    }
-
-    if (data.errors && Object.keys(data.errors).length > 0) {
-      throw new Error(
-        "API-Football error: " + JSON.stringify(data.errors)
-      );
-    }
-
+    const startDate = new Date(today + "T00:00:00Z");
     const leagueMap = new Map(
       africanLeagues.map(league => [league.id, league])
     );
 
-    const fixtures = (data.response || [])
-      .filter(match => leagueMap.has(match.league?.id))
-      .map(match => ({
-        fixture: match.fixture,
-        league: match.league,
-        teams: match.teams,
-        goals: match.goals,
-        score: match.score,
-        competitionCategory:
-          leagueMap.get(match.league.id).category
-      }));
+    const allFixtures = [];
+
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setUTCDate(currentDate.getUTCDate() + i);
+
+      const date = currentDate.toISOString().slice(0, 10);
+
+      const url = new URL(
+        "https://v3.football.api-sports.io/fixtures"
+      );
+
+      url.searchParams.set("date", date);
+      url.searchParams.set("timezone", "Africa/Lusaka");
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          "x-apisports-key": apiKey
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          "API-Football request failed: " + response.status
+        );
+      }
+
+      if (data.errors && Object.keys(data.errors).length > 0) {
+        throw new Error(
+          "API-Football error: " + JSON.stringify(data.errors)
+        );
+      }
+
+      const fixtures = (data.response || [])
+        .filter(match => leagueMap.has(match.league?.id))
+        .map(match => ({
+          fixture: match.fixture,
+          league: match.league,
+          teams: match.teams,
+          goals: match.goals,
+          score: match.score,
+          competitionCategory:
+            leagueMap.get(match.league.id).category
+        }));
+
+      allFixtures.push(...fixtures);
+    }
 
     const result = new Response(JSON.stringify({
       success: true,
       message: "African football fixtures loaded successfully",
       date: today,
-      total: fixtures.length,
+      days: 7,
+      total: allFixtures.length,
       competitions: africanLeagues,
-      fixtures
+      fixtures: allFixtures
     }), {
       status: 200,
       headers
