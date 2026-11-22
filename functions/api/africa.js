@@ -16,106 +16,143 @@ export async function onRequest(context) {
     });
   }
 
-  const africanLeagues = [
-    { id: 36, name: "AFCON Qualifiers", category: "National Teams" },
-    { id: 922, name: "Women's AFCON", category: "National Teams" },
-    { id: 538, name: "AFCON U20", category: "National Teams" },
-    { id: 973, name: "AFCON U17", category: "National Teams" },
-    { id: 535, name: "CECAFA Senior Challenge Cup", category: "National Teams" },
-    { id: 1159, name: "CECAFA U20", category: "National Teams" },
-    { id: 771, name: "COSAFA U20", category: "National Teams" },
-    { id: 12, name: "CAF Champions League", category: "African Clubs" },
-    { id: 20, name: "CAF Confederation Cup", category: "African Clubs" },
-    { id: 533, name: "CAF Super Cup", category: "African Clubs" },
-    { id: 869, name: "CECAFA Club Cup", category: "African Clubs" },
-    { id: 1164, name: "CAF Women's Champions League", category: "African Clubs" }
+  const competitions = [
+    {
+      id: 4720,
+      name: "CAF Champions League",
+      category: "African Clubs",
+      season: "2026-2027",
+      type: "next"
+    },
+    {
+      id: 5057,
+      name: "CAF Confederation Cup",
+      category: "African Clubs",
+      season: "2026-2027",
+      type: "next"
+    },
+    {
+      id: 4496,
+      name: "Africa Cup of Nations",
+      category: "National Teams",
+      season: "2025",
+      type: "season"
+    }
   ];
+
+  const api = "https://www.thesportsdb.com/api/v1/json/123/";
+
+  function score(value) {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function convertEvent(event) {
+    const finished = /finished|full time|ft/i.test(
+      event.strStatus || ""
+    );
+
+    const date = event.strTimestamp || event.dateEvent || null;
+
+    return {
+      fixture: {
+        id: event.idEvent,
+        date,
+        status: {
+          short: finished ? "FT" : "NS",
+          long: event.strStatus || (finished ? "Match Finished" : "Not Started")
+        },
+        venue: {
+          name: event.strVenue || "Venue not available"
+        },
+        timezone: "Africa/Lusaka"
+      },
+      league: {
+        id: Number(event.idLeague),
+        name: event.strLeague,
+        country: "Africa",
+        season: event.strSeason,
+        logo: event.strLeagueBadge || null
+      },
+      teams: {
+        home: {
+          id: event.idHomeTeam || null,
+          name: event.strHomeTeam,
+          logo: event.strHomeTeamBadge || null
+        },
+        away: {
+          id: event.idAwayTeam || null,
+          name: event.strAwayTeam,
+          logo: event.strAwayTeamBadge || null
+        }
+      },
+      goals: {
+        home: score(event.intHomeScore),
+        away: score(event.intAwayScore)
+      },
+      score: {
+        fulltime: {
+          home: score(event.intHomeScore),
+          away: score(event.intAwayScore)
+        }
+      },
+      competitionCategory:
+        competitions.find(c => c.id === Number(event.idLeague))?.category
+    };
+  }
 
   try {
     const cache = caches.default;
     const cacheKey = new Request(
-      new URL("/api/africa-cache-v3", context.request.url).toString()
+      new URL("/api/africa-cache-v4", context.request.url)
     );
 
     const cached = await cache.match(cacheKey);
     if (cached) return cached;
 
-    const apiKey = context.env.API_FOOTBALL_KEY;
+    const requests = competitions.map(async competition => {
+      const endpoint = competition.type === "next"
+        ? "eventsnextleague.php"
+        : "eventsseason.php";
 
-    if (!apiKey) {
-      throw new Error("API_FOOTBALL_KEY is not configured");
-    }
+      const url = new URL(api + endpoint);
+      url.searchParams.set("id", competition.id);
 
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Africa/Lusaka",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit"
-    }).format(new Date());
+      if (competition.type === "season") {
+        url.searchParams.set("s", competition.season);
+      }
 
-    const startDate = new Date(today + "T00:00:00Z");
-    const leagueMap = new Map(
-      africanLeagues.map(league => [league.id, league])
-    );
-
-    const allFixtures = [];
-
-    for (let i = 0; i < 2; i++) {
-      const currentDate = new Date(startDate);
-      currentDate.setUTCDate(currentDate.getUTCDate() + i);
-
-      const date = currentDate.toISOString().slice(0, 10);
-
-      const url = new URL(
-        "https://v3.football.api-sports.io/fixtures"
-      );
-
-      url.searchParams.set("date", date);
-      url.searchParams.set("timezone", "Africa/Lusaka");
-
-      const response = await fetch(url.toString(), {
-        headers: {
-          "x-apisports-key": apiKey
-        }
-      });
-
-      const data = await response.json();
+      const response = await fetch(url.toString());
 
       if (!response.ok) {
         throw new Error(
-          "API-Football request failed: " + response.status
+          competition.name + " request failed: " + response.status
         );
       }
 
-      if (data.errors && Object.keys(data.errors).length > 0) {
-        throw new Error(
-          "API-Football error: " + JSON.stringify(data.errors)
-        );
-      }
+      const data = await response.json();
 
-      const fixtures = (data.response || [])
-        .filter(match => leagueMap.has(match.league?.id))
-        .map(match => ({
-          fixture: match.fixture,
-          league: match.league,
-          teams: match.teams,
-          goals: match.goals,
-          score: match.score,
-          competitionCategory:
-            leagueMap.get(match.league.id).category
-        }));
+      return (data.events || []).map(convertEvent);
+    });
 
-      allFixtures.push(...fixtures);
-    }
+    const results = await Promise.all(requests);
+    const fixtures = results.flat();
+
+    fixtures.sort((a, b) =>
+      new Date(a.fixture.date || 0) -
+      new Date(b.fixture.date || 0)
+    );
 
     const result = new Response(JSON.stringify({
       success: true,
-      message: "African football fixtures loaded successfully",
-      date: today,
-      days: 2,
-      total: allFixtures.length,
-      competitions: africanLeagues,
-      fixtures: allFixtures
+      message: "African football data loaded successfully",
+      source: "TheSportsDB",
+      total: fixtures.length,
+      competitions,
+      fixtures
     }), {
       status: 200,
       headers
