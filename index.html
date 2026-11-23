@@ -471,7 +471,7 @@ if(isAfrica){
   render(events);
 
   $('status').textContent=isAfrica
-   ? `African fixtures: ${events.length} | Teams analysed: 0 | Updated: ${new Date().toLocaleTimeString()}`
+   ? `African fixtures: ${events.length} | Recent results: ${recentResults.length} | Teams analysed: ${Object.keys(teamStats).length} | Updated: ${new Date().toLocaleTimeString()}`
    : `Fixtures: ${events.length} | Recent results: ${recentResults.length} | Teams analysed: ${Object.keys(teamStats).length} | Updated: ${new Date().toLocaleTimeString()}`;
 
  }catch(err){
