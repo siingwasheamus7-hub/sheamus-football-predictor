@@ -155,6 +155,7 @@ const recentResults = results.flatMap(item => item.recent);
       total: fixtures.length,
       competitions,
       fixtures
+      recentResults
     }), {
       status: 200,
       headers
