@@ -107,7 +107,7 @@ export async function onRequest(context) {
   try {
     const cache = caches.default;
     const cacheKey = new Request(
-      new URL("/api/africa-cache-v4", context.request.url)
+      new URL("/api/africa-cache-v5", context.request.url)
     );
 
     const cached = await cache.match(cacheKey);
