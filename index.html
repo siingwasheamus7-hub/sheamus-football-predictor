@@ -389,50 +389,79 @@ async function load(){
   let events=[];
   let recentResults=[];
 
-  if(isAfrica){
-   if(data.success===false)throw new Error(data.message||data.error||'African football service failed');
+  
+if(isAfrica){
+  if(data.success===false)throw new Error(data.message||data.error||'African football service failed');
 
-   buildTeamStats([]);
+  recentResults=(data.recentResults||[])
+   .filter(f=>
+    Number(f.league?.id)===africaLeagueIds[league] &&
+    f.teams?.home?.id &&
+    f.teams?.away?.id &&
+    f.goals?.home!==null &&
+    f.goals?.home!==undefined &&
+    f.goals?.away!==null &&
+    f.goals?.away!==undefined
+   )
+   .map(f=>({
+    date:f.fixture?.date,
+    competitions:[{
+     competitors:[
+      {
+       homeAway:'home',
+       team:{id:String(f.teams.home.id)},
+       score:Number(f.goals.home)
+      },
+      {
+       homeAway:'away',
+       team:{id:String(f.teams.away.id)},
+       score:Number(f.goals.away)
+      }
+     ]
+    }]
+   }));
 
-   events=(data.fixtures||[])
-    .filter(f=>Number(f.league?.id)===africaLeagueIds[league])
-    .map(f=>{
-     const status=String(f.fixture?.status?.short||'NS').toUpperCase();
-     const completed=['FT','AET','PEN'].includes(status);
-     const live=['1H','HT','2H','ET','BT','P','LIVE'].includes(status);
+  buildTeamStats(recentResults);
 
-     return {
-      id:String(f.fixture?.id),
-      date:f.fixture?.date,
-      competitions:[{
-       competitors:[
-        {
-         homeAway:'home',
-         team:{
-          id:String(f.teams?.home?.id),
-          displayName:f.teams?.home?.name||'Home'
-         },
-         score:f.goals?.home??f.score?.fulltime?.home??null
+  events=(data.fixtures||[])
+   .filter(f=>Number(f.league?.id)===africaLeagueIds[league])
+   .map(f=>{
+    const status=String(f.fixture?.status?.short||'NS').toUpperCase();
+    const completed=['FT','AET','PEN'].includes(status);
+    const live=['1H','HT','2H','ET','BT','P','LIVE'].includes(status);
+
+    return {
+     id:String(f.fixture?.id),
+     date:f.fixture?.date,
+     competitions:[{
+      competitors:[
+       {
+        homeAway:'home',
+        team:{
+         id:String(f.teams?.home?.id),
+         displayName:f.teams?.home?.name||'Home'
         },
-        {
-         homeAway:'away',
-         team:{
-          id:String(f.teams?.away?.id),
-          displayName:f.teams?.away?.name||'Away'
-         },
-         score:f.goals?.away??f.score?.fulltime?.away??null
-        }
-       ],
-       status:{
-        type:{
-         completed,
-         state:live?'in':'pre',
-         detail:f.fixture?.status?.long||status
-        }
+        score:f.goals?.home??f.score?.fulltime?.home??null
+       },
+       {
+        homeAway:'away',
+        team:{
+         id:String(f.teams?.away?.id),
+         displayName:f.teams?.away?.name||'Away'
+        },
+        score:f.goals?.away??f.score?.fulltime?.away??null
        }
-      }]
-     };
-    });
+      ],
+      status:{
+       type:{
+        completed,
+        state:live?'in':'pre',
+        detail:f.fixture?.status?.long||status
+       }
+      }
+     }]
+    };
+   });
   }else{
    recentResults=data.recentResults||[];
    buildTeamStats(recentResults);
