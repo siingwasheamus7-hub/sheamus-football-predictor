@@ -157,16 +157,7 @@ return {
     )
 };
 
-      if (!response.ok) {
-        throw new Error(
-          competition.name + " request failed: " + response.status
-        );
-      }
-
-      const data = await response.json();
-
-      return (data.events || []).map(convertEvent);
-    });
+  });
 
     const results = await Promise.all(requests);
 
