@@ -424,7 +424,11 @@ if(isAfrica){
   buildTeamStats(recentResults);
 
   events=(data.fixtures||[])
-   .filter(f=>Number(f.league?.id)===africaLeagueIds[league])
+   .filter(f=>
+    Number(f.league?.id)===africaLeagueIds[league] &&
+    new Date(f.fixture?.date).getTime()>=Date.now() &&
+    !['FT','AET','PEN'].includes(String(f.fixture?.status?.short||'').toUpperCase())
+   )
    .map(f=>{
     const status=String(f.fixture?.status?.short||'NS').toUpperCase();
     const completed=['FT','AET','PEN'].includes(status);
