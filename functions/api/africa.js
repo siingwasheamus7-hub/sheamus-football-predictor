@@ -139,7 +139,9 @@ export async function onRequest(context) {
     });
 
     const results = await Promise.all(requests);
-    const fixtures = results.flat();
+
+const fixtures = results.flatMap(item => item.upcoming);
+const recentResults = results.flatMap(item => item.recent);
 
     fixtures.sort((a, b) =>
       new Date(a.fixture.date || 0) -
