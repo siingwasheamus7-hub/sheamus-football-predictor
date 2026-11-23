@@ -125,7 +125,37 @@ export async function onRequest(context) {
         url.searchParams.set("s", competition.season);
       }
 
-      const response = await fetch(url.toString());
+      const pastUrl = new URL(api + "eventspastleague.php");
+pastUrl.searchParams.set("id", competition.id);
+
+const [upcomingResponse, pastResponse] = await Promise.all([
+  fetch(url.toString()),
+  fetch(pastUrl.toString())
+]);
+
+if (!upcomingResponse.ok) {
+  throw new Error(competition.name + " upcoming request failed");
+}
+
+const upcomingData = await upcomingResponse.json();
+
+let pastEvents = [];
+
+if (pastResponse.ok) {
+  const pastData = await pastResponse.json();
+  pastEvents = pastData.events || [];
+}
+
+return {
+  upcoming: (upcomingData.events || []).map(convertEvent),
+  recent: pastEvents
+    .map(convertEvent)
+    .filter(event =>
+      event.fixture.status.short === "FT" &&
+      event.goals.home !== null &&
+      event.goals.away !== null
+    )
+};
 
       if (!response.ok) {
         throw new Error(
