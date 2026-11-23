@@ -177,34 +177,34 @@ const recentResults = results.flatMap(item => item.recent);
       new Date(a.fixture.date || 0) -
       new Date(b.fixture.date || 0)
     );
+const result = new Response(JSON.stringify({
+  success: true,
+  message: "African football data loaded successfully",
+  source: "TheSportsDB",
+  total: fixtures.length,
+  competitions,
+  fixtures,
+  recentResults
+}), {
+  status: 200,
+  headers
+});
 
-    const result = new Response(JSON.stringify({
-      success: true,
-      message: "African football data loaded successfully",
-      source: "TheSportsDB",
-      total: fixtures.length,
-      competitions,
-      fixtures
-      recentResults
-    }), {
-      status: 200,
-      headers
-    });
+await cache.put(cacheKey, result.clone());
 
-    await cache.put(cacheKey, result.clone());
+return result;
 
-    return result;
-
-  } catch (error) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message
-    }), {
-      status: 500,
-      headers: {
-        ...headers,
-        "Cache-Control": "no-store"
-      }
-    });
-  }
+} catch (error) {
+  return new Response(JSON.stringify({
+    success: false,
+    error: error.message
+  }), {
+    status: 500,
+    headers: {
+      ...headers,
+      "Cache-Control": "no-store"
+    }
+  });
 }
+}
+    
